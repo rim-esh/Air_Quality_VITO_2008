@@ -161,33 +161,6 @@ install.packages(c(
 ))
 ```
 
-## How to Run the Project
-
-1. Clone the repository.
-
-```bash
-git clone https://github.com/your-username/carbon-monoxide-prediction-ml.git
-```
-
-2. Open the project folder in RStudio.
-
-3. Place the cleaned dataset inside the `data/` folder.
-
-```text
-data/Clean_air_data.xlsx
-```
-
-4. Run the scripts in sequence:
-
-```r
-source("scripts/01_data_preparation.R")
-source("scripts/02_exploratory_data_analysis.R")
-source("scripts/03_baseline_models.R")
-source("scripts/04_machine_learning_models.R")
-source("scripts/05_model_evaluation.R")
-```
-
-5. Review model outputs in the `outputs/` folder and figures in the `figures/` folder.
 
 ## Evaluation Metrics
 

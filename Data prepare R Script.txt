@@ -1,0 +1,87 @@
+#1. File Choose
+setwd(dirname(file.choose()))
+getwd()
+
+#2. Read CSV
+df <- read.csv("AirQualityUCI.csv", stringsAsFactors = TRUE)
+str(df)
+head(df)
+
+#3. Merge Date and Time column and Delete Date and Time column
+df$datetime <- as.POSIXct(
+  paste(as.character(df$Date), as.character(df$Time)),
+  format = "%Y-%m-%d %H:%M:%S"
+)
+str(df$datetime)
+head(df$Date)
+head(df$Time)
+#Delete date and time column
+df_1 <-df
+df_1$Date <- NULL
+df_1$Time <- NULL
+
+
+#4. Change column name
+colnames(df_1) <- c("co_mg_m3","sensor1_co","nmhc_ug_m3","benzene_ug_m3","sensor2_nmhc","nox_ppb","sensor3_nox","no2_ug_m3","sensor4_no2","sensor5_o3","temperature_c","relative_humidity","absolute_humidity", "date_time")
+str(df_1)
+
+
+#5. Check Negative Values
+sapply(df_1[sapply(df_1, is.numeric)], function(x) sum(x < 0, na.rm = TRUE))
+sapply(df_1[sapply(df_1, is.numeric)],
+       function(x) sum(x == -200, na.rm = TRUE))
+
+sum(df_1$temperature_c < 0, na.rm=TRUE) - sum(df_1$temperature_c == -200, na.rm=TRUE)
+
+#6. -200 value update in N/A
+num <- sapply(df_1, is.numeric)
+df_1[num] <- lapply(df_1[num], function(x) replace(x, x == -200, NA))
+summary(df_1[num])
+sapply(df_1[sapply(df_1, is.numeric)], function(x) sum(x == -200, na.rm = TRUE))
+
+
+#7. Check missing value
+missing_count <- colSums(is.na(df_1))
+missing_percent <- round((missing_count / nrow(df_1)) * 100, 2)
+data.frame(
+  Column = names(df_1),
+  Missing_Count = missing_count,
+  Missing_Percent = missing_percent
+)
+
+
+#8. Missing Value treatment
+   #8.1: drop nmhc_ug_m3
+df_2<- df_1
+df_2$nmhc_ug_m3 <- NULL
+   #8.2 make different data frame for calculate variable
+air_df <- df_2[, sapply(df_2, is.numeric)]
+str(air_df)
+#Missingness was mostly low (~3.9%) for sensor and meteorological variables, moderate (~17–18%) for CO/NOx/NO2, and extremely high (90.2%) for NMHC. Due to the very high missingness, NMHC was excluded from modeling. Remaining variables were imputed using MICE with predictive mean matching (PMM)
+   #8.3 Update Missing Date/time value from neighbor
+which(is.na(df_2$date_time))
+df_2$date_time[416]  <- as.POSIXct("2004-03-28 01:00:00")
+df_2$date_time[9152] <- as.POSIXct("2005-03-27 01:00:00")
+df_2[c(416, 9152), "date_time"]
+sum(is.na(df_2$date_time))
+
+    #8.4 apply MICE method to treatment missing value
+library(mice)
+air_df_treat <- mice(air_df, m = 5, method = "pmm", maxit = 10, seed = 123)
+plot(air_df_treat)
+densityplot(air_df_treat)
+
+#9. Create Final Database 
+air_df_final<- complete(air_df_treat,1)
+sum(is.na(air_df_final))
+df_final <- cbind(df_2["date_time"],air_df_final)
+ncol(df_final)
+sum(is.na(df_final))
+
+#10. Save in excel format 
+library(openxlsx)
+write.xlsx(df_final, "Clean_air_data.xlsx")
+
+
+#11. Finally remove all data and values from Global Environment
+rm(list = ls())
